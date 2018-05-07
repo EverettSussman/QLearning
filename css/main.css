@@ -1,0 +1,84 @@
+* {
+	/* border: 1px solid black;*/
+}
+
+h1 {
+	text-align: center;
+}
+
+h2 {
+	text-align: center;
+}
+
+h3 {
+	text-align: center;
+	font-size: 1em;
+	font-family: 'Georgia';
+}
+
+p, li {
+	font-size: 1em;
+	font-family: 'Georgia';
+}
+
+.animationControls {
+	width: 100%;
+	text-align: center;
+	display: inline-block;
+	position: relative;
+}
+.buttonContainer button {
+	display: inline-block;
+	text-align: center;
+	left: 20%;
+	right: 20%;
+}
+
+.animateSpeed {
+	position: relative;
+	display: inline-block;
+	text-align: center;
+	width: 40%;
+	height: 10%;
+}
+
+/* Navigation Menu */
+#nav-menu {
+	position: relative;
+	width: 50%;
+	height: 10%;
+	left: 25%;
+	margin-top: 4em;
+	display: inline-block;
+	text-align: center;
+	border: #efefef 2px;
+}
+
+canvas {
+	display: inline-block;
+	text-align: center;
+	border: 2px dashed black;
+	margin-left: 10%;
+	margin-right: 10%;
+}
+
+/*.nav-button {
+	position: relative;
+	display: inline-block;
+	text-align: center;
+	width: 20%;
+	height: 50%;
+	font-size: 2em;
+	margin-right: 10%;
+	margin-left: 10%;
+	background-color: rgba(0, 0, 0, .28);
+}
+
+.nav-button:hover {
+	color: #f30404;
+	background-color: rgba(240, 219, 219, .28);
+}
+
+.nav-button:active {
+	background-color: rgba(255, 255, 255, .6);
+}*/

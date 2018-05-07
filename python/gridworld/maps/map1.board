@@ -1,0 +1,12 @@
+"
+0 - represents box with 0 reward
+X - represents no box
+G - represents +1 reward
+B - represents -10 reward
+"
+
+
+0B0X0G
+0B0X00
+0B0000
+BBBBBB
