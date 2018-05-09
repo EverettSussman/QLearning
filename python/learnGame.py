@@ -47,9 +47,10 @@ def runGames(gameObj, learner, bare=False, iters=100, game_speed=1000, game_para
         if diagnostics:
             # Fill in diagnostics
             ret['scores'].append(game.score)
-            ret['alphas'].append(learner.alpha)
             if hasattr(learner, 'epsilon'):
                 ret['epsilons'].append(learner.epsilon)
+            if hasattr(learner, 'alpha'):
+                ret['alphas'].append(learner.alpha)
 
             if not bare:
                 ax1.plot(ret['scores'], c="k")
@@ -118,9 +119,9 @@ if __name__ == '__main__':
     # genScoreDist('gridworld/results/gridworld4.npy', 100, 100, GridWorld, QLearningAgent, params)
     # totScores = []
     features = gridWorldFeatures
-    agent = DeepQAgent
+    agent = RandomAgent
     game = GridWorld
-    genScoreDist('gridworld/results/DQN0.npy', 20, 1000, game, agent, params)
+    genScoreDist('gridworld/results/random0.npy', 100, 100, game, agent, params)
     # res, run_agent = showLearner(1000, agent, game, params, bare=True, features=None)
     
 
