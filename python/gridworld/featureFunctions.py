@@ -3,8 +3,7 @@ import numpy as np
 GOALVAL = 10
 """
 State information to use.
-Format is agentLoc (x,y), goal location (x,y), number rows in board,
-number columns in board, rewards of board 
+Format is agentLoc (x,y), goal location (x,y)
 """
 
 def feature1(state, action):
@@ -74,6 +73,6 @@ def feature3(state, action):
 	else:
 		return 0
 
-gridWorldFeatures = [feature1, feature2, feature3]
+gridWorldFeatures = [feature1]
 
 

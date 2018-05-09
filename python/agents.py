@@ -1,5 +1,9 @@
 import numpy as np
-from collections import Counter
+import random
+from collections import Counter, deque
+from keras import Sequential
+from keras.optimizers import Adam
+from keras.layers import Activation, Dense
 
 class Agent():
 
@@ -38,7 +42,7 @@ class Agent():
 		# return state,action values
 		return self.qvalues[(state, action)]
 
-	def action_fn(self, state):
+	def action_fn(self, state, terminal=False):
 		# Handle actions
 		pass
 
@@ -49,7 +53,7 @@ class Agent():
 
 class RandomAgent(Agent):
 
-	def action_fn(self, state):
+	def action_fn(self, state, terminal=False):
 		# Return a random action
 		new_action = np.random.choice(self.actions)
 		new_state = state
@@ -119,7 +123,7 @@ class QLearningAgent(Agent):
 
 		self.qvalues[old_stateAct] += self.alpha * correction
 
-	def action_fn(self, state):
+	def action_fn(self, state, terminal=False):
 		new_state = state
 		new_action, bestVal = self.getAction(new_state)
 
@@ -205,7 +209,7 @@ class ApproximateQLearningAgent(Agent):
 		self.weights += self.alpha * correction * self.fvals
 		self.weights = self.weights / np.linalg.norm(self.weights)
 
-	def action_fn(self, state):
+	def action_fn(self, state, terminal=False):
 		new_state = state
 		new_action, bestVal = self.getAction(new_state)
 		print(self.weights)
@@ -216,6 +220,117 @@ class ApproximateQLearningAgent(Agent):
 		self.last_state = new_state
 		return self.last_action
 
+
+class DeepQAgent(Agent):
+	def __init__(self, actions=None, alpha=.01, alpha_dec=.99,
+									epsilon=.8, epsilon_dec=.95, 
+									gamma=.99, tol=.0001):
+		Agent.__init__(self, actions=actions)
+		"""
+		Constructor for DeepQAgent 
+		Inspired by: https://keon.io/deep-q-learning/
+
+		Keyword Arguments
+
+		features: list of functions to use for approximate 
+			q-learning agent
+		alpha: learning rate (usually .1)
+		gamma: discount factor
+		tol: check for convergence of qvalues
+		state_size: default is for state size of gridworld map0
+		"""
+		self.memory = deque(maxlen=2000)
+		self.alpha = alpha
+		self.alpha_dec = alpha_dec
+		self.epsilon = epsilon
+		self.epsilon_dec = epsilon_dec
+		self.gamma = gamma
+		self.tol = tol
+		self.last_qvalues = None
+		self.model = None
+		self.state_size = None
+
+	def reset(self):
+		# Reset agent for next epoch
+		self.last_state = None
+		self.last_action = None
+		self.last_reward = None
+
+		# Learn from memory of game
+		sampleSize = min(100, len(self.memory))
+		self.learn(sampleSize)
+
+		self.alpha *= self.alpha_dec
+		self.epsilon *= self.epsilon_dec
+		if self.epsilon < .1:
+			self.epsilon = .1
+
+	def initializeModel(self):
+		model = Sequential()
+		model.add(Dense(10, input_dim=self.state_size, activation='relu'))
+		model.add(Dense(len(self.actions), activation='linear'))
+		model.compile(loss='mse', optimizer=Adam(lr=self.alpha))
+
+		self.model = model
+
+	def formatState(self, state):
+		temp = np.array([el for el in state])
+		temp = np.reshape(temp, [1, self.state_size])
+		return temp
+
+	def remember(self, new_state, terminal=False):
+		self.memory.append((self.last_state, self.last_action, 
+							self.last_reward, new_state, terminal))
+
+	def getVal(self, state, action):
+		if self.model is None:
+			return 0
+
+		inputState = self.formatState(state)
+		ret = self.model.predict(inputState)
+		# print("State: {}".format(state))
+		# print("Values: {}".format(ret[0]))
+		if action is None:
+			return ret[0]
+		else:
+			return ret[0][self.actions.index(action)]
+
+	def getAction(self, state):
+		self.state_size = len(state)
+		if self.model is None:
+			self.initializeModel()
+
+		# Now a vector of values for all actions
+		actValues = self.getVal(state, None)
+		bestAction, bestVal = self.actions[np.argmax(actValues)], np.max(actValues)
+
+		# if np.random.random() < self.epsilon:
+		# 	bestAction = np.random.choice(self.actions)
+
+		return bestAction, bestVal
+
+	def learn(self, batchSize):
+		minibatch = random.sample(self.memory, batchSize)
+		for state, action, reward, new_state, terminal in minibatch:
+			if terminal:
+				y = reward
+			else:
+				y = reward + self.gamma * np.amax(self.getVal(new_state, None))
+			yhat = self.getVal(state, None)
+			yhat[self.actions.index(action)] = y
+			inputState = self.formatState(state)
+			self.model.fit(inputState, yhat.reshape([1,len(self.actions)]), 
+							epochs=1, verbose=0)
+
+	def action_fn(self, state, terminal=False):
+		new_state = state
+		if self.last_state is not None:
+			self.remember(new_state, terminal=terminal)
+		new_action, bestVal = self.getAction(new_state)
+		self.last_qvalues = self.qvalues
+		self.last_action = new_action
+		self.last_state = new_state
+		return self.last_action
 
 
 

@@ -1,4 +1,5 @@
 import numpy as np
+import pickle
 import matplotlib.pyplot as plt
 import tqdm
 from gridworld import *
@@ -70,11 +71,15 @@ def runGames(gameObj, learner, bare=False, iters=100, game_speed=1000, game_para
                 # ax6.set_title(r"$\bar{r}$", loc="left")
 
                 plt.draw()
+            else:
+                pass
+                # print("Epoch: {}".format(game_num))
+                # print("Score: {}".format(game.score))
 
 
         # reset learner
         learner.reset()
-    return ret
+    return ret, learner
 
 def genScoreDist(filename, reps, epochs, game, agent_class, params, features=None):
     totScores = []
@@ -84,18 +89,25 @@ def genScoreDist(filename, reps, epochs, game, agent_class, params, features=Non
             agent = agent_class(features=features)
         else:
             agent = agent_class()
-        results = runGames(game, agent, bare=True, iters=epochs, game_params=params, diagnostics=True)
+        results, run_agent = runGames(game, agent, bare=True, iters=epochs, game_params=params, diagnostics=True)
         totScores.append(results['scores'])
         np.save(filename, totScores)
     return totScores
 
-def showLearner(epochs, agent_class, game, params, features=None):
+def showLearner(epochs, agent_class, game, params, bare=False, features=None):
     if features is not None:
         agent = agent_class(features=features)
     else:
         agent = agent_class()
-    results = runGames(game, agent, bare=False, iters=epochs, game_params=params, diagnostics=True)
-    return results
+    results, run_agent = runGames(game, agent, bare=bare, iters=epochs, game_params=params, diagnostics=True)
+    return results, run_agent
+
+def save_object(obj, filename):
+    with open(filename, 'wb') as output:  # Overwrites any existing file.
+        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
+
+# # sample usage
+# save_object(company1, 'company1.pkl')
 
 if __name__ == '__main__':
 
@@ -106,10 +118,11 @@ if __name__ == '__main__':
     # genScoreDist('gridworld/results/gridworld4.npy', 100, 100, GridWorld, QLearningAgent, params)
     # totScores = []
     features = gridWorldFeatures
-    agent = ApproximateQLearningAgent
+    agent = DeepQAgent
     game = GridWorld
-
-    showLearner(200, agent, game, params, features=features)
+    genScoreDist('gridworld/results/DQN0.npy', 20, 1000, game, agent, params)
+    # res, run_agent = showLearner(1000, agent, game, params, bare=True, features=None)
+    
 
 
 

@@ -165,12 +165,13 @@ class GridWorld:
         Format is agentLoc (x,y), goal location (x,y), number rows in board,
         number columns in board, rewards of board 
         """
-        state = (loc[0], loc[1], self.goal[0], self.goal[1])
-        state += (len(self.board),)
-        state += (len(self.board[0]),)
-        for i in range(len(self.board)):
-            for j in range(len(self.board[0])):
-                state += (self.board[i][j],)
+        # state = (loc[0], loc[1], self.goal[0], self.goal[1])
+        state = (loc[0], loc[1])
+        # state += (len(self.board),)
+        # state += (len(self.board[0]),)
+        # for i in range(len(self.board)):
+        #     for j in range(len(self.board[0])):
+        #         state += (self.board[i][j],)
         return state
 
     def drawTile(self, i, j, x, y):
@@ -192,7 +193,6 @@ class GridWorld:
             if self.learner is not None:
                 # need agentLoc to be j, i
                 state = self.generateState([j,i])
-
                 bestAction, _ = self.learner.getAction(state)
                 # draw qvals
                 self.drawQVal("UP", bestAction, state, x + self.tileWIDTH / 2 - 20, y + 10)
@@ -300,10 +300,10 @@ class GridWorld:
             self.moveAgent(action)  
 
         # Check whether game is over
-        # NEED TO IMPLEMENT LEARNING OF FINAL STATE
-        if self.agentLoc == self.goal:
-            self.action_fn(self.state)
-            return False   
+        if self.agentLoc == self.goal or self.score < -400:
+            self.action_fn(self.state, terminal=True)
+            return False  
+
 
         # Wait just a bit.
         pg.time.delay(self.rest)
@@ -321,7 +321,7 @@ class GridWorld:
 
         # Check whether game is over
         # NEED TO IMPLEMENT LEARNING OF FINAL STATE
-        if self.agentLoc == self.goal:
+        if self.agentLoc == self.goal or self.score < -400:
             # self.reward_fn()
             self.action_fn(self.state)
             return False   
