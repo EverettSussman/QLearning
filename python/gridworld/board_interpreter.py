@@ -26,10 +26,18 @@ class MakeBoard:
         else:
             raise NameError('File does not exist.')
 
-        self.vals = {'X': None, '0': 0, 'G': 1, 'B': -10}
+        self.vals = {'X': None, '0': -1, 'G': 10, 'B': -10}
 
         # Generate board and chars
         self.genBoard()
+
+        # Find goal location
+        self.goalLoc = None
+        for i in range(len(self.chars)):
+            for j in range(len(self.chars[i])):
+                if self.chars[i][j] == 'G':
+                    self.goalLoc = [j, i]
+
 
         return 
 

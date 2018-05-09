@@ -17,67 +17,53 @@ ORANGE = (255,128,0)
 
 class GridWorld:
 
-    def __init__(self, probs=None, action_fn=None, reward_fn=None, board_file=None, epoch=None, speed=10):
-        """ Constructor for GridWorld class.
+    def __init__(self, params=None, learner=None, board_file=None, epoch=None, speed=10):
+        """
+        Constructor for GridWorld class.
 
         Keyword Arguments:
 
-        probs: Transition probabilities for game.  If None, then probabilities are 
-            determinitstic.  If tuple of floats, then probabilities go by given 
-            distribution where [action to left, action, action to right] is distribution.
+        params: Dictionary containing game parameters.  We have 
+            probs: Transition probabilities for game.  If None, then probabilities are 
+                determinitstic.  If tuple of floats, then probabilities go by given 
+                distribution where [action to left, action, action to right] is distribution.
 
         action_fn: Function for handling actions of game, takes in game state as input.
 
         reward_fn: Function for handling rewards of game.
-
         """
-        self.rest = speed
-        if epoch is None:
-            self.epoch = 0
-        else:
-            self.epoch = epoch
-
-        self.action_fn = action_fn
-        self.reward_fn = reward_fn
-
-        self.obPenalty = -1
-        self.score = 0
-
-        self.actions = ["RIGHT", "LEFT", "UP", "DOWN"]
-        self.actionDict = {"RIGHT":0, "LEFT":1, "UP":2, "DOWN":3}
-
-        if probs is None:
-            self.probs = np.eye(len(self.actions))
-        else:
-            if len(probs) != 3:
-                raise NameError("Invalid probability dist.")
-            else:
-                self.probs = np.array([[probs[1], 0, probs[0], probs[2]],
-                                       [0, probs[1], probs[2], probs[0]],
-                                       [probs[2], probs[0], probs[1], 0],
-                                       [probs[0], probs[2], 0, probs[1]]])
-
         self.WIDTH = 800
         self.HEIGHT = 600
 
         self.boardHEIGHT = self.HEIGHT
         self.boardWIDTH = .75 * self.WIDTH
 
-        # Generate board
-        if board_file is None:
-            self.mb = MakeBoard('gridworld/maps/map0.board')
+        self.rest = speed
+        if epoch is None:
+            self.epoch = 0
         else:
-            self.mb = MakeBoard(board_file)
-        self.board = self.mb.board
+            self.epoch = epoch
 
-        # Find goal tile
-        for i in range(self.board.shape[0]):
-            for j in range(self.board.shape[1]):
-                if self.board[i][j] == 1:
-                    self.goal = [j, i]
+        self.obPenalty = -2
+        self.score = 0
 
-        self.agentLoc = self.initializeAgent()
+        self.actions = ["RIGHT", "LEFT", "UP", "DOWN"]
+        self.actionDict = {"RIGHT":0, "LEFT":1, "UP":2, "DOWN":3}
 
+        self.initializeLearner(learner)
+
+        self.initializeParams(params)
+
+        self.initializeBoard()
+
+        self.initializeAgent()
+
+        self.initializePygame()
+
+        # To be updated during game
+        self.state = None
+
+    def initializePygame(self):
         # Initialize pygame
         pg.init()
         pg.font.init()
@@ -89,14 +75,52 @@ class GridWorld:
         # Set up the screen for rendering.
         self.screen = pg.display.set_mode((self.WIDTH, self.HEIGHT), 0, 32)
 
+    def initializeLearner(self, learner):
+        # determine action and reward functions
+        if learner is None:
+            self.learner = None
+            self.action_fn = None
+            self.reward_fn = None
+        else:
+            self.learner = learner
+            self.action_fn = learner.action_fn
+            self.reward_fn = learner.reward_fn
+
+    def initializeParams(self, params):
+        # Extract parameters for game
+        if params is None:
+            self.probs = np.eye(len(self.actions))
+            self.board_file = None
+        else:
+            self.board_file = params['board_file']
+            probs = params['probs']
+            if len(probs) != 3:
+                raise NameError("Invalid probability dist.")
+            else:
+                self.probs = np.array([[probs[1], 0, probs[0], probs[2]],
+                                       [0, probs[1], probs[2], probs[0]],
+                                       [probs[2], probs[0], probs[1], 0],
+                                       [probs[0], probs[2], 0, probs[1]]])
+
     def initializeAgent(self):
         goodLoc = False
         while not goodLoc:
             x = np.random.randint(self.board.shape[1])
             y = np.random.randint(self.board.shape[0])
-            if self.board[y][x] is not None:
+            if self.board[y][x] is not None and [x, y] != self.goal:
                 goodLoc = True
-        return [x, y]
+
+        self.agentLoc = [x, y]
+
+    def initializeBoard(self):
+        # Generate board
+        if self.board_file is None:
+            self.mb = MakeBoard('gridworld/maps/map0.board')
+        else:
+            self.mb = MakeBoard(self.board_file)
+
+        self.board = self.mb.board
+        self.goal = self.mb.goalLoc
 
     def moveAgent(self, action):
         actionVal = self.actionDict[action]
@@ -115,7 +139,6 @@ class GridWorld:
         elif realAction == "LEFT":
             xnew, ynew = x - 1, y
 
-        print(xnew, ynew, self.board.shape[0])
         if (xnew < 0 or xnew >= self.board.shape[1] 
                     or ynew < 0 or ynew >= self.board.shape[0] 
                     or self.board[ynew][xnew] is None):
@@ -136,15 +159,29 @@ class GridWorld:
                 self.reward_fn(self.board[y][x])
             self.score += self.board[y][x]
 
-    def drawTile(self, i, j, x, y):
-        val = self.board[i][j]
+    def generateState(self, loc):
+        """
+        Update state information to give learner.
+        Format is agentLoc (x,y), goal location (x,y), number rows in board,
+        number columns in board, rewards of board 
+        """
+        state = (loc[0], loc[1], self.goal[0], self.goal[1])
+        state += (len(self.board),)
+        state += (len(self.board[0]),)
+        for i in range(len(self.board)):
+            for j in range(len(self.board[0])):
+                state += (self.board[i][j],)
+        return state
 
-        if val is None:
+    def drawTile(self, i, j, x, y):
+        val = self.mb.chars[i][j]
+
+        if val == 'X':
             pg.draw.rect(self.screen, BLACK, (x, y, self.tileWIDTH, self.tileHEIGHT), 0)
         else:
-            if val == 1:
+            if val == 'G':
                 pg.draw.rect(self.screen, GREEN, (x, y, self.tileWIDTH, self.tileHEIGHT), 0)
-            elif val == -10:
+            elif val == 'B':
                 pg.draw.rect(self.screen, RED, (x, y, self.tileWIDTH, self.tileHEIGHT), 0)
 
             # draw angled lines
@@ -152,7 +189,25 @@ class GridWorld:
             pg.draw.line(self.screen, WHITE, [x + self.tileWIDTH, y], [x, y + self.tileHEIGHT], 3)
 
             # DRAW QVALUES HERE
-            
+            if self.learner is not None:
+                # need agentLoc to be j, i
+                state = self.generateState([j,i])
+
+                bestAction, _ = self.learner.getAction(state)
+                # draw qvals
+                self.drawQVal("UP", bestAction, state, x + self.tileWIDTH / 2 - 20, y + 10)
+                self.drawQVal("RIGHT", bestAction, state, x + 3 * self.tileWIDTH / 4 - 15, y + self.tileHEIGHT / 2 - 10)
+                self.drawQVal("DOWN", bestAction, state, x + self.tileWIDTH / 2 - 20, y + self.tileHEIGHT - 30)
+                self.drawQVal("LEFT", bestAction, state, x + 1 * self.tileWIDTH / 4 - 30, y + self.tileHEIGHT / 2 - 10)
+
+    def drawQVal(self, action, bestAction, state, x, y):
+        if bestAction == action:
+            color = ORANGE
+        else:
+            color = WHITE
+        text = self.qfont.render('{0:.2f}'.format(float(self.learner.getVal(state, action))), True, color)
+        self.screen.blit(text, (x, y)) 
+
     def convertPixels(self, x, y):
         return int(x * self.tileWIDTH), int(y * self.tileHEIGHT)
 
@@ -195,6 +250,23 @@ class GridWorld:
         self.screen.blit(speedText, (self.boardWIDTH + 20, self.HEIGHT * .3))
 
     def game_loop(self):
+        # Redraw screen every time
+        self.screen.fill(BLACK)
+
+        # Draw Board 
+        self.drawBoard()
+
+        # Draw Agent
+        self.drawAgent()
+
+        # Draw score
+        self.drawScore()
+
+        # Render the display.
+        pg.display.update()
+
+        # Update the state information
+        self.state = self.generateState(self.agentLoc)
 
         # Process input events.
         for event in pg.event.get():
@@ -214,7 +286,7 @@ class GridWorld:
                         self.moveAgent("LEFT")
                 # Check whether rest should change
                 elif event.key == pg.K_MINUS:
-                    if self.rest < 500:
+                    if self.rest < 2000:
                         self.rest *= 2
                 elif event.key == pg.K_EQUALS:
                     if self.rest <= 10:
@@ -224,42 +296,41 @@ class GridWorld:
 
         # Have agent move if learning
         if self.action_fn is not None:
-            action = self.action_fn(self.agentLoc)
-            self.moveAgent(action)
-
-        # Redraw screen every time
-        self.screen.fill(BLACK)
-
-        # Draw Board 
-        self.drawBoard()
-
-        # Draw Agent
-        self.drawAgent()
-
-        # Draw score
-        self.drawScore()
-
-        # Render the display.
-        pg.display.update()
+            action = self.action_fn(self.state)
+            self.moveAgent(action)  
 
         # Check whether game is over
+        # NEED TO IMPLEMENT LEARNING OF FINAL STATE
         if self.agentLoc == self.goal:
-            print(self.score)
-            return False
+            self.action_fn(self.state)
+            return False   
 
         # Wait just a bit.
         pg.time.delay(self.rest)
 
         return True
 
-# Testing
+    def bare_game_loop(self):
 
-# gw = GridWorld(board_file='gridworld/maps/map1.board')
-# print(gw.board)
+        self.state = self.generateState(self.agentLoc)
+
+        # Have agent move if learning
+        if self.action_fn is not None:
+            action = self.action_fn(self.state)
+            self.moveAgent(action) 
+
+        # Check whether game is over
+        # NEED TO IMPLEMENT LEARNING OF FINAL STATE
+        if self.agentLoc == self.goal:
+            # self.reward_fn()
+            self.action_fn(self.state)
+            return False   
+
+        return True
 
 if __name__ == '__main__':
     
-    game = GridWorld(board_file='maps/map0.board', probs=[.2, .6, .2])
+    game = GridWorld(board_file='maps/map0.board', probs=[.1, .8, .1])
 
     while game.game_loop():
         pass
