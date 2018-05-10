@@ -1,3 +1,4 @@
+
 # QLearning
 
 ## Introduction 
@@ -22,6 +23,6 @@ We have implemented the following agents to learn how to play GridWorld:
 
 ## Repository Layout
 
-## 
+## How to Use this Repo
 
 
