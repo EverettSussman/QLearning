@@ -1,0 +1,22 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+</head>
+<body>
+<h1 id="qlearning">QLearning</h1>
+<p>The purpose of this project is to better visualize how Q-learning algorithms behave under different hyperparameters. To do this, we implemented GridWorld:</p>
+<p>INSERT PICTURE OF GRIDWORLD HERE</p>
+<p>GridWorld is a <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>×</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">2 \times 2</annotation></semantics></math> board that shows the q-values for every possible state-action pair on the board. The action that any agent takes for a given state is highlighted with orange text (note that if the agent is using an <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ϵ</mi><annotation encoding="application/x-tex">\epsilon</annotation></semantics></math>-greedy policy, then it may take a random action).</p>
+<p>The rules of GridWorld are simple - an agent may move up, down, left, or right at any state. If the agent moves out of bounds, then the agent loses 2 points. If the agent moves into a red square, then the agent loses 10 points. If the agent moves into the green square (the goal tile), then the agent wins 10 points.</p>
+<p>We have implemented the following agents to learn how to play GridWorld:</p>
+<ul>
+<li><p>RandomAgent - this agent moves randomly around the board, and is used as a baseline for our other agents.</p></li>
+<li><p>QLearningAgent - this agent learns how to play each board with an off-policy q-learning algorithm.</p></li>
+</ul>
+</body>
+</html>
